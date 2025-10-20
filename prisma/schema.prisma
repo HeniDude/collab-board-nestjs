@@ -12,9 +12,27 @@ model User {
 
   email String @unique
   password String
+  isVerified Boolean @default(false)
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
+  verifications EmailVerification[]
+
   @@map("users")
+}
+
+model EmailVerification {
+  id String @id @default(uuid())
+  code String
+  email String
+  expiresAt DateTime @map("expires_at")
+  used Boolean @default(false)
+  createdAt DateTime @default(now()) @map("create_at")
+
+  user User? @relation(fields: [userId], references: [id])
+  userId String? @map("user_id")
+
+  @@index([email])
+  @@map("email_verifications")
 }
