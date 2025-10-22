@@ -23,6 +23,8 @@ export class AuthService {
     const code = this.codeGeneratorService.generate();
     const expiresAt = this.codeGeneratorService.calcExpiresAtCode();
 
+    console.log(hashedPassword, code);
+
     await this.prisma.emailVerification.create({
       data: {
         email,
@@ -59,5 +61,9 @@ export class AuthService {
       where: { id: record.id },
       data: { used: true, userId: user.id },
     });
+
+    return {
+      message: 'User successfuly is registered',
+    };
   }
 }

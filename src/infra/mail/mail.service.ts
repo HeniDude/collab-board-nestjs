@@ -1,22 +1,26 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import * as nodemailer from 'nodemailer';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as handlebars from 'handlebars';
 
 @Injectable()
 export class MailService {
   private transporter: nodemailer.Transporter;
 
-  constructor() {
+  constructor(private readonly configService: ConfigService) {
     this.initTransporter();
   }
 
   private async initTransporter() {
-    const testAccount = await nodemailer.createTestAccount();
     this.transporter = nodemailer.createTransport({
-      host: 'smtp.ethereal.email',
-      port: 587,
+      host: this.configService.get<string>('SMTP_HOST'),
+      port: this.configService.get<number>('SMTP_PORT'),
+      secure: this.configService.get<string>('SMTP_SECURE') === 'true',
       auth: {
-        user: testAccount.user,
-        pass: testAccount.pass,
+        user: this.configService.get<string>('SMTP_USER'),
+        pass: this.configService.get<string>('SMTP_PASS'),
       },
     });
   }
@@ -25,11 +29,23 @@ export class MailService {
     if (!this.transporter) await this.initTransporter();
 
     try {
+      const templatePath = path.join(
+        process.cwd(),
+        'src',
+        'infra',
+        'mail',
+        'templates',
+        'verification.hbs',
+      );
+      const source = fs.readFileSync(templatePath, 'utf8');
+      const template = handlebars.compile(source);
+      const html = template({ code });
+
       const info = await this.transporter.sendMail({
-        from: '"CollabBoard" <noreply@collabboard.dev>',
+        from: `"CollabBoard" <${this.configService.get('SMTP_USER')}>`,
         to,
         subject: 'Verification Code',
-        text: `Your verification code is: ${code}`,
+        html,
       });
       console.log(`📨 Email preview: ${nodemailer.getTestMessageUrl(info)}`);
     } catch (error) {
