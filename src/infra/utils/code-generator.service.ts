@@ -7,4 +7,8 @@ export class CodeGeneratorService {
     const max = Math.pow(10, length) - 1;
     return Math.floor(min + Math.random() * (max - min + 1)).toString();
   }
+
+  calcExpiresAtCode(): Date {
+    return new Date(Date.now() + 10 * 60 * 1000);
+  }
 }
