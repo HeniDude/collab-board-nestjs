@@ -1,4 +1,4 @@
-import { BadGatewayException, BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/infra/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { MailService } from 'src/infra/mail/mail.service';
@@ -56,6 +56,8 @@ export class AuthService {
     const user = await this.prisma.user.create({
       data: { email, password: record.passwordHash, isVerified: true },
     });
+
+    await this.mailService.sendWelcomLetterAfterVerification(email);
 
     await this.prisma.emailVerification.update({
       where: { id: record.id },

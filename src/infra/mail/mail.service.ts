@@ -47,10 +47,38 @@ export class MailService {
         subject: 'Verification Code',
         html,
       });
-      console.log(`📨 Email preview: ${nodemailer.getTestMessageUrl(info)}`);
     } catch (error) {
       console.error(error);
       throw new InternalServerErrorException('Ошибка при отправке письма');
+    }
+  }
+
+  async sendWelcomLetterAfterVerification(to: string) {
+    if (!this.transporter) await this.initTransporter();
+
+    try {
+      const templatePath = path.join(
+        process.cwd(),
+        'src',
+        'infra',
+        'mail',
+        'templates',
+        'welcomeAfterVerification.hbs',
+      );
+
+      const source = fs.readFileSync(templatePath, 'utf8');
+      const template = handlebars.compile(source);
+      const html = template({});
+
+      await this.transporter.sendMail({
+        from: `"CollabBoard" <${this.configService.get('SMTP_USER')}>`,
+        to,
+        subject: 'Добро пожаловать в CollabBoard 🎉',
+        html,
+      });
+    } catch (error) {
+      console.error('❌ Failed to send welcome email:', error);
+      throw new InternalServerErrorException('Ошибка при отправке письма приветствия');
     }
   }
 }
