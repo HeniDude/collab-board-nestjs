@@ -1,8 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from 'src/infra/prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { MailService } from 'src/infra/mail/mail.service';
 import { CodeGeneratorService } from 'src/infra/utils/code-generator.service';
+import { JwtService } from 'src/infra/jwt/jwt.service';
 
 @Injectable()
 export class AuthService {
@@ -10,6 +11,7 @@ export class AuthService {
     private prisma: PrismaService,
     private mailService: MailService,
     private codeGeneratorService: CodeGeneratorService,
+    private jwtService: JwtService,
   ) {}
 
   async requestVerification(email: string, password: string) {
@@ -22,8 +24,6 @@ export class AuthService {
     const hashedPassword = await bcrypt.hash(password, 10);
     const code = this.codeGeneratorService.generate();
     const expiresAt = this.codeGeneratorService.calcExpiresAtCode();
-
-    console.log(hashedPassword, code);
 
     await this.prisma.emailVerification.create({
       data: {
@@ -41,6 +41,40 @@ export class AuthService {
     };
   }
 
+  async login(email: string, password: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    if (!user.isVerified) {
+      throw new BadRequestException('Email not verified');
+    }
+
+    const isPasswordValid = await bcrypt.compare(password, user.password);
+    if (!isPasswordValid) {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    const tokens = this.jwtService.generateTokens({
+      id: user.id,
+      email: user.email,
+    });
+
+    return {
+      message: 'Login successful',
+      user: {
+        id: user.id,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
+      ...tokens,
+    };
+  }
+
   async verifyEmail(email: string, code: string) {
     const record = await this.prisma.emailVerification.findFirst({
       where: { email, code, used: false },
@@ -51,7 +85,7 @@ export class AuthService {
     if (record.expiresAt < new Date()) throw new BadRequestException('Verification code expired');
 
     const existingUser = await this.prisma.user.findUnique({ where: { email } });
-    if (existingUser) throw new BadRequestException('Email already veriied and registered');
+    if (existingUser) throw new BadRequestException('Email already verified and registered');
 
     const user = await this.prisma.user.create({
       data: { email, password: record.passwordHash, isVerified: true },
@@ -64,8 +98,50 @@ export class AuthService {
       data: { used: true, userId: user.id },
     });
 
+    const tokens = this.jwtService.generateTokens({
+      id: user.id,
+      email: user.email,
+    });
+
     return {
-      message: 'User successfuly is registered',
+      message: 'User successfully registered',
+      user: {
+        id: user.id,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
+      ...tokens,
     };
+  }
+
+  async refreshToken(refreshToken: string) {
+    try {
+      const payload = this.jwtService.verifyRefreshToken(refreshToken);
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user || !user.isVerified) {
+        throw new UnauthorizedException('Invalid refresh token');
+      }
+
+      const tokens = this.jwtService.generateTokens({
+        id: user.id,
+        email: user.email,
+      });
+
+      return {
+        message: 'Token refreshed successfully',
+        user: {
+          id: user.id,
+          email: user.email,
+          isVerified: user.isVerified,
+        },
+        ...tokens,
+      };
+    } catch (error) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
   }
 }
