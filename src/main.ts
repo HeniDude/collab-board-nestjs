@@ -22,12 +22,12 @@ async function bootstrap() {
   );
 
   const port = config.getOrThrow<number>('HTTP_PORT');
-  const host = config.getOrThrow<string>('HTTP_HOST');
+  const host = config.get<string>('HTTP_HOST') || '0.0.0.0';
 
   try {
-    await app.listen(port);
+    await app.listen(port, host);
 
-    logger.log('Server is running at: ', host);
+    logger.log(`Server is running on http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`);
   } catch (error) {
     logger.error('Failed to start server: ', error.message, error);
     process.exit(1);

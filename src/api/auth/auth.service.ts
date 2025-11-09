@@ -91,7 +91,7 @@ export class AuthService {
       data: { email, password: record.passwordHash, isVerified: true },
     });
 
-    await this.mailService.sendWelcomLetterAfterVerification(email);
+    await this.mailService.sendWelcomeLetterAfterVerification(email);
 
     await this.prisma.emailVerification.update({
       where: { id: record.id },

@@ -1,13 +1,14 @@
 import { Module, Global } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { JwtModule } from './jwt/jwt.module';
-import { MailService } from './mail/mail.service';
+import { MailModule } from './mail/mail.module';
 import { CodeGeneratorService } from './utils/code-generator.service';
+import { QueueModule } from './queue/queue.module';
 
 @Global()
 @Module({
-  imports: [PrismaModule, JwtModule],
-  providers: [MailService, CodeGeneratorService],
-  exports: [MailService, CodeGeneratorService, JwtModule],
+  imports: [PrismaModule, JwtModule, QueueModule, MailModule],
+  providers: [CodeGeneratorService],
+  exports: [MailModule, CodeGeneratorService, JwtModule],
 })
 export class InfraModule {}
