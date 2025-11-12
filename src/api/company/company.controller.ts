@@ -1,6 +1,6 @@
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, HttpCode, HttpStatus, Post, UseGuards } from '@nestjs/common';
 import { CompanyService } from './company.service';
-import { initCompanyDto } from './dto';
+import { InitCompanyDto } from './dto';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtAuthGuard } from '../auth/guards/jwt.guard';
 
@@ -10,7 +10,8 @@ export class CompanyController {
 
   @UseGuards(JwtAuthGuard)
   @Post('init')
-  async initCompany(dto: initCompanyDto, @CurrentUser() user: any) {
+  @HttpCode(HttpStatus.CREATED)
+  async initCompany(@Body() dto: InitCompanyDto, @CurrentUser() user: any) {
     return this.companyService.initCompany(dto, user);
   }
 }

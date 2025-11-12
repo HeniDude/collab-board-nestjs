@@ -1,3 +1,3 @@
-import { initCompanyDto } from './init-company.dto';
+import { InitCompanyDto } from './init-company.dto';
 
-export { initCompanyDto };
+export { InitCompanyDto };
